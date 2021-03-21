@@ -489,7 +489,6 @@ This replicates the stock trading strategy as described by <b>Paul Gins</b> in t
 The strategy consists on calculating a <a href="https://www.investopedia.com/terms/t/trix.asp" target="_blank">Triple Exponential Average</a> of 39 days, and a 9 days Exponential Average as signal on that Trix. In addition to the Trix and it's signal Mr. Gins applies either a 200 of 55 days Exponential Moving Average on the stock prices itself.<br>
 The BUY strategy: Trix < 0 & Trix crosses EMA(Trix) upwards & SP > EMA(SP)<br>
 The SELL strategy: Trix < 0 & Trix < EMA(Trix)<br>
-<br>
 <b>The result is compared with a buy-and-hold strategy. </b><br>
 <br>
 The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.<br>
