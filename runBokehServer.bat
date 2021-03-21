@@ -1,0 +1,1 @@
+bokeh serve stocks5_app.py --show

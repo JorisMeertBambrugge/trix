@@ -307,9 +307,9 @@ def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=
     trixResult=strategy(buySellList,data['Close'],trafficTax=0.0035,tafficCost=0.001)
     buyHoldResult=strategy([(0,-1)],data['Close'],trafficTax=0.0035,tafficCost=0.001)
     resultDiv=Div(text=f"""
-    Excluding dividends, these strategies would have resulted in a yield of:<br>
-    Trix: {trixResult}%.<br>
-    Buy and hold: {buyHoldResult}%.<br>
+    <p style="color:red;">Excluding dividends, these strategies would have resulted in a yield of:<br>
+    <b>Trix: {trixResult}%.<br>
+    Buy and hold: {buyHoldResult}%.<br></b></p>
     <br>
     Assumptions: a tax rate of 0.35% per transaction and a broker fee for 0.1% per transaction.
     """)
@@ -450,7 +450,7 @@ def ticker_update(attr, old, new):
     ticker=new
     graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
     layout.children[-1]=graps
-tickerInput=TextInput(value="ABI.BR", title="Yahoo Ticker Symbol")
+tickerInput=TextInput(value="ABI.BR", title="Yahoo Ticker Symbol",width=300)
 tickerInput.on_change("value", ticker_update)
 
 def EMA_update(attr, old, new):
@@ -458,7 +458,7 @@ def EMA_update(attr, old, new):
     EMA_days=new  
     graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
     layout.children[-1]=graps
-EMA=TextInput(value="55", title="Exponential moving average - days")
+EMA=TextInput(value="55", title="Exponential moving average - days",width=300)
 EMA.on_change("value", EMA_update)
 
 def Trix_EMA_update(attr, old, new):
@@ -466,7 +466,7 @@ def Trix_EMA_update(attr, old, new):
     Trix_EMA=new  
     graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
     layout.children[-1]=graps
-Trix_EMA_input=TextInput(value="39", title="EMA in the Trix equation - days")
+Trix_EMA_input=TextInput(value="39", title="EMA in the Trix equation - days",width=300)
 Trix_EMA_input.on_change("value", Trix_EMA_update)
 
 def EMA_on_Trix_update(attr, old, new):
@@ -474,7 +474,7 @@ def EMA_on_Trix_update(attr, old, new):
     EMA_on_Trix=new  
     graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
     layout.children[-1]=graps
-EMA_on_Trix_input=TextInput(value="9", title="EMA applied on Trix - days")
+EMA_on_Trix_input=TextInput(value="9", title="EMA applied on Trix - days",width=300)
 EMA_on_Trix_input.on_change("value", EMA_on_Trix_update)
 
 inputRow=Row(tickerInput,EMA,Trix_EMA_input,EMA_on_Trix_input)
@@ -482,32 +482,23 @@ inputRow=Row(tickerInput,EMA,Trix_EMA_input,EMA_on_Trix_input)
 
 ######EXPLANATION DIV#########################################################
 infoDiv=Div(text="""
-# trix
-Stock autocorrelation analysis via Trix
-
-This project is a data science and data visualization demo with python (bokeh), by Joris Meert.
-
-This replicates the stock trading strategy as described by Paul Gins in the edition #3 of 2021 of "Beste Belegger" on page 71 (<a href="https://vfb.be/onlinemagazines" target="_blank">VFB<a>). 
-The strategy consists on calculating a <a href="https://www.investopedia.com/terms/t/trix.asp" target="_blank">Triple Exponential Average</a> of 39 days, and a 9 days Exponential Average as signal on that Trix. In addition to the Trix and it's signal Mr. Gins applies either a 200 of 55 days Exponential Moving Average on the stock prices itself.'
-The result is compared with a buy-and-hold strategy. 
-The BUY strategy: Trix < 0 & Trix crosses EMA(Trix) upwards & SP > EMA(SP)
-The SELL strategy: Trix < 0 & Trix < EMA(Trix)
-
-
-To serve the website from your PC: 
-1. download the files
-2. Open a cmd in the folder where you saved the files
-3. run the command: "bokeh serve stocks5_app --port 5010 --show --allow-websocket-origin=*"
-
-Prior to this, you should have installed Python v3+, and the python module called Bokeh. Make sure the bokeh.exe and pyton.exe file directories are added to your PATH variables.
-
-The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.
-""",width=1200,height=300)
+<h1># trix</h1>
+<h2>Stock autocorrelation analysis via Trix</h2>
+This project is a data science and data visualization demo with python (bokeh), by <a href="mailto:joris_meert@hotmail.com">Joris Meert</a><br>
+This replicates the stock trading strategy as described by <b>Paul Gins</b> in the edition #3 of 2021 of "Beste Belegger" on page 71 (<a href="https://vfb.be/onlinemagazines" target="_blank">VFB<a>).<br>
+The strategy consists on calculating a <a href="https://www.investopedia.com/terms/t/trix.asp" target="_blank">Triple Exponential Average</a> of 39 days, and a 9 days Exponential Average as signal on that Trix. In addition to the Trix and it's signal Mr. Gins applies either a 200 of 55 days Exponential Moving Average on the stock prices itself.<br>
+The BUY strategy: Trix < 0 & Trix crosses EMA(Trix) upwards & SP > EMA(SP)<br>
+The SELL strategy: Trix < 0 & Trix < EMA(Trix)<br>
+<br>
+<b>The result is compared with a buy-and-hold strategy. </b><br>
+<br>
+The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.<br>
+""",width=1200,height=350)
 
 
 ######All togheter
 graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-layout=Column(inputRow,graps)
+layout=Column(infoDiv,inputRow,graps)
 
 curdoc().add_root(layout)
 curdoc().title="Trix"
