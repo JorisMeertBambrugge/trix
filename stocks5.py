@@ -440,8 +440,7 @@ def createView(symbol,start=None,getStrategyYield=False,EMA_days=200,Trix_EMA_da
 ###############################################################################
 
 #weekly check for opportunity to sell/buy
-stocksOfInterest=['ABI.BR','AGS.BR','IMMO.BR','SMAR.BR','SOF.BR','UCB.BR','TUB.BR','AM.PA',
-                  'HBH.DE','TL5.MC','DCC.L','MGGT.L','AV.L','PG','CRESY','INTC','CSIQ','NPSNY','VMW']
+stocksOfInterest=['ABI.BR']#,'AGS.BR','IMMO.BR','SMAR.BR','SOF.BR','UCB.BR','TUB.BR','AM.PA','HBH.DE','TL5.MC','DCC.L','MGGT.L','AV.L','PG','CRESY','INTC','CSIQ','NPSNY','VMW']
 
 for symbol in stocksOfInterest:
     layout=createView(symbol, start='1/1/2003',getStrategyYield=True,EMA_days=55,Trix_EMA_days=39,EMA_on_Trix_days=9)
