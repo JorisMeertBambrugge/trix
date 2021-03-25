@@ -2,6 +2,8 @@ import pandas_datareader as pdr
 import pandas as pd
 import random
 import numpy as np
+import os
+import sys
 
 from bokeh.plotting import figure,curdoc
 from bokeh.io import show,reset_output,output_file
@@ -87,7 +89,7 @@ def createDivPlot(dividendDict,data,start='1/1/2013'):
         dividendDFSource = ColumnDataSource(data=dividendDF)
         hover = HoverTool(tooltips=[("date","@date{%m/%d/%Y}"),("dividend","@dividend")],formatters={'@date': 'datetime'})
         tools=['pan','box_zoom','wheel_zoom',hover,'reset']
-        divPlot=figure(width=1200,height=400,title='Historical dividend',x_axis_type='datetime',y_axis_label='Dividend',
+        divPlot=figure(width=1200,height=400,title='Historical dividend - from Yahoo Finance',x_axis_type='datetime',y_axis_label='Dividend',
                        y_range=(0,1.05*max(max(dividendDF['divPercent']),max(dividendDF['dividend']))),tools=tools)
         divPlot.scatter(x='date',y='dividend',line_color="red",fill_color='red',size=10,alpha=0.8,name='dividend',source=dividendSource,legend_label='Dividend coupons')
         divPlot.step(x='date',y='dividend',line_color="green",line_width=3,alpha=0.5,source=dividendDFSource,legend_label='Total dividend/year')  
@@ -380,6 +382,7 @@ def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=
             weekdaysStrings.append('7_Sunday')     
     sourceDays=ColumnDataSource({'ratio to week average':relToWeekAvg,'day of the week':weekdaysStrings})
     weekdayBoxPlot=createBoxPlot(Filter='day of the week',yAxisFilter='ratio to week average',source=sourceDays,title='Variability depending on the day of the week',width=1200)
+    weekdayBoxPlot.y_range=Range1d(0.9,1.1)
     
     ################# fluctuation depending on month of the year ##############                
     months = dates.month.values#get the weekdays (0=monday, 1=tuesday,...)
@@ -414,7 +417,7 @@ def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=
     
     sourceMonth=ColumnDataSource({'ratio to year average':relToYearAvg,'month':monthStrings})
     monthBoxPlot=createBoxPlot(Filter='month',yAxisFilter='ratio to year average',source=sourceMonth,title='Variability depending on the month of the year',width=1200)
-    
+    monthBoxPlot.y_range=Range1d(0.8,1.2)
 # =============================================================================
 #     ############## fluctuation depending on day of the month #################             
 #     days = dates.day.values#get the weekdays (0=monday, 1=tuesday,...)
@@ -451,21 +454,36 @@ tickerInput.on_change("value", ticker_update)
 
 def EMA_update(attr, old, new):
     global EMA_days
-    EMA_days=new  
+    try:
+        EMA_days=str(int(new))
+    except Exception as e:
+        print("exception: "+str(e)+" , in "+os.path.basename(__file__)+" on line "+str(sys.exc_info()[2].tb_lineno))
+        EMA_days='55' 
+        EMA.value=EMA_days
     updateCalback()
 EMA=TextInput(value="55", title="Exponential moving average - days",width=250)
 EMA.on_change("value", EMA_update)
 
 def Trix_EMA_update(attr, old, new):
     global Trix_EMA
-    Trix_EMA=new  
+    try:
+        Trix_EMA=str(int(new))
+    except Exception as e:
+        print("exception: "+str(e)+" , in "+os.path.basename(__file__)+" on line "+str(sys.exc_info()[2].tb_lineno))
+        Trix_EMA='39'
+        Trix_EMA_input.value=Trix_EMA
     updateCalback()
 Trix_EMA_input=TextInput(value="39", title="EMA in the Trix equation - days",width=250)
 Trix_EMA_input.on_change("value", Trix_EMA_update)
 
 def EMA_on_Trix_update(attr, old, new):
     global EMA_on_Trix
-    EMA_on_Trix=new  
+    try:
+        EMA_on_Trix=str(int(new))
+    except Exception as e:
+        print("exception: "+str(e)+" , in "+os.path.basename(__file__)+" on line "+str(sys.exc_info()[2].tb_lineno))
+        EMA_on_Trix='9' 
+        EMA_on_Trix_input.value=EMA_on_Trix
     updateCalback()
 EMA_on_Trix_input=TextInput(value="9", title="EMA applied on Trix - days",width=250)
 EMA_on_Trix_input.on_change("value", EMA_on_Trix_update)
@@ -482,7 +500,7 @@ The strategy consists on calculating a <a href="https://www.investopedia.com/ter
 The BUY strategy: Trix < 0 & Trix crosses EMA(Trix) upwards & SP > EMA(SP)<br>
 The SELL strategy: Trix < 0 & Trix < EMA(Trix)<br>
 <b>This result is compared with a buy-and-hold strategy. </b><br>
-The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.
+The raw stock price data is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.
 """,width=1200,height=230)
 
 animationDiv=Div(text="""<div class="loader">
