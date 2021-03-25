@@ -1,5 +1,5 @@
 # trix
-Stock autocorrelation analysis via Trix
+Stock autocorrelation analysis via Trix: <a href="https://trix-jm.herokuapp.com/stocks5_app" target="_blank">https://trix-jm.herokuapp.com/stocks5_app</a>
 
 This project is a data science and data visualization demo with python (bokeh), by Joris Meert.
 
@@ -18,3 +18,5 @@ To serve the website from your PC:
 Prior to this, you should have installed Python v3+, and the python module called Bokeh. Make sure the bokeh.exe and pyton.exe file directories are added to your PATH variables.<br>
 <br>
 The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.<br>
+  
+ 
