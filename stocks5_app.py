@@ -310,7 +310,6 @@ def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=
     <p style="color:red;">Excluding dividends, these strategies would have resulted in a yield of:<br>
     <b>Trix: {trixResult}%.<br>
     Buy and hold: {buyHoldResult}%.<br></b></p>
-    <br>
     Assumptions: a tax rate of 0.35% per transaction and a broker fee for 0.1% per transaction.
     """)
 
@@ -436,9 +435,7 @@ def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=
 ###################DATABASE####################################################
 ###############################################################################
 
-def update():
-    layout.children[-1]=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-
+#default settings
 ticker='ABI.BR'
 EMA_days='55'
 Trix_EMA='39'
@@ -448,32 +445,28 @@ EMA_on_Trix='9'
 def ticker_update(attr, old, new):
     global ticker
     ticker=new
-    graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-    layout.children[-1]=graps
+    updateCalback()
 tickerInput=TextInput(value="ABI.BR", title="Yahoo Ticker Symbol",width=250)
 tickerInput.on_change("value", ticker_update)
 
 def EMA_update(attr, old, new):
     global EMA_days
     EMA_days=new  
-    graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-    layout.children[-1]=graps
+    updateCalback()
 EMA=TextInput(value="55", title="Exponential moving average - days",width=250)
 EMA.on_change("value", EMA_update)
 
 def Trix_EMA_update(attr, old, new):
     global Trix_EMA
     Trix_EMA=new  
-    graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-    layout.children[-1]=graps
+    updateCalback()
 Trix_EMA_input=TextInput(value="39", title="EMA in the Trix equation - days",width=250)
 Trix_EMA_input.on_change("value", Trix_EMA_update)
 
 def EMA_on_Trix_update(attr, old, new):
     global EMA_on_Trix
     EMA_on_Trix=new  
-    graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-    layout.children[-1]=graps
+    updateCalback()
 EMA_on_Trix_input=TextInput(value="9", title="EMA applied on Trix - days",width=250)
 EMA_on_Trix_input.on_change("value", EMA_on_Trix_update)
 
@@ -489,17 +482,51 @@ The strategy consists on calculating a <a href="https://www.investopedia.com/ter
 The BUY strategy: Trix < 0 & Trix crosses EMA(Trix) upwards & SP > EMA(SP)<br>
 The SELL strategy: Trix < 0 & Trix < EMA(Trix)<br>
 <b>This result is compared with a buy-and-hold strategy. </b><br>
-The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.<br>
-""",width=1200,height=300)
+The raw stock price date is pullled from the Yahoo Finance API and the Dividend data is scraped from Yahoo Finance.
+""",width=1200,height=230)
 
+animationDiv=Div(text="""<div class="loader">
+<style scoped> 
+.loader {
+  width: 100px;
+  height: 100px;
+  background-color: red;
+  position: relative;
+  animation-name: example;
+  animation-duration: 4s;
+  animation-iteration-count: infinite;
+}
+
+@keyframes example {
+  0%   {background-color:red; left:0px; top:0px;}
+  25%  {background-color:yellow; left:1000px; top:0px;}
+  50%  {background-color:blue; left:1000px; top:200px;}
+  75%  {background-color:green; left:0px; top:200px;}
+  100% {background-color:red; left:0px; top:0px;}
+}
+</style></div>
+                 """,width=1000,height=200)
+
+def updateVisuals():
+    layout.children[-1]=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))  
+
+def updateCalback():
+    layout.children[-1]=animationDiv
+    curdoc().add_next_tick_callback(updateVisuals)
 
 ######All togheter
 graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
-layout=Column(infoDiv,inputRow,graps)
+layout=Column(infoDiv,inputRow,animationDiv)
 
-curdoc().add_root(layout)
-curdoc().title="Trix"
+def start():
+    graphs=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
+    layout.children[-1]=graphs   
+
+doc=curdoc()
+doc.add_timeout_callback(start,500)#wait 500 ms before executing start
+doc.add_root(layout)
+doc.title="Trix"
 show(layout)
-    
+
 
     
