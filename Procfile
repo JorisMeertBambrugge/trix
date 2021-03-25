@@ -1,0 +1,1 @@
+web: bokeh serve --log-level=debug --port=$PORT --num-procs=0 --host=trix-jm.herokuapp.com --address=0.0.0.0 --use-xheaders stocks5_app.py
