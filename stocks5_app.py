@@ -7,13 +7,13 @@ import sys
 
 from bokeh.plotting import figure,curdoc
 from bokeh.io import show,reset_output,output_file
-from bokeh.models import Column,Row,ColumnDataSource,LinearAxis, Range1d, Band,Div,Quad,TextInput
+from bokeh.models import Column,Row,ColumnDataSource,LinearAxis, Range1d, Band,Div,Quad,TextInput,DatePicker
 from bokeh.palettes import Spectral11
 from bokeh.models import HoverTool
 
 import urllib.request as urlRQ
 from bs4 import BeautifulSoup as bs
-from datetime import datetime
+from datetime import datetime,date
 
 ###############################################################################
 #####################HELP FUNCTIONS############################################
@@ -38,14 +38,14 @@ def crossing(a,b):
 # =============================================================================
 
 #a function that scrapes the dividend history from yahoo
-def get_dividend(name,start='1/1/2013'):
+def get_dividend(name,startDate):
     dividendList = []
     dividendDateList = []
     
     #calculate the time differences in seconds between 1-Jan-2000 and today
     #startTimeSeconds=1262300400 #1 Jan 2010 
-    refDate=datetime.strptime(start, '%m/%d/%Y')
-    startTimeSeconds=int((refDate-datetime(1970,1,1)).total_seconds())
+    #refDate=datetime.strptime(start, '%m/%d/%Y')
+    startTimeSeconds=int((datetime(startDate.year,startDate.month,startDate.day)-datetime(1970,1,1)).total_seconds())
     endTimeSeconds=int((datetime.today()-datetime(1970,1,1)).total_seconds())
 
     url=f"https://finance.yahoo.com/quote/{name}/history?period1={startTimeSeconds}&period2={endTimeSeconds}&interval=div%7Csplit&filter=div&frequency=1d"
@@ -73,7 +73,7 @@ def fill_missing_range(df, field, range_from, range_to, range_step=1, fill_with=
             right = pd.DataFrame({field:np.arange(range_from, range_to, range_step)}))\
       .sort_values(by=field).reset_index().fillna(fill_with).drop(['index'], axis=1)
 
-def createDivPlot(dividendDict,data,start='1/1/2013'):
+def createDivPlot(dividendDict,data,startDate):
     dividendDF=pd.DataFrame(dividendDict)
     dividendDF['year']=dividendDF['date'].dt.year+1#create a year column
     dividendDF["yearDiv"] = dividendDF.groupby(["year"])["dividend"].transform(sum)#sum by year
@@ -82,7 +82,7 @@ def createDivPlot(dividendDict,data,start='1/1/2013'):
     dividendDF=dividendDF[['date','year','yearDiv','divPercent']]#keep only what matters
     dividendDF.columns=['date','year','dividend','divPercent']#rename
     dividendDF = dividendDF.drop_duplicates(subset=['year'], keep='first')#drop duplicates
-    dividendDF=fill_missing_range(dividendDF, 'year', datetime.today().year, datetime.strptime(start, '%m/%d/%Y').year, range_step=-1, fill_with=0)#add a row with zero for each year where there was no dividend given
+    dividendDF=fill_missing_range(dividendDF, 'year', datetime.today().year, startDate.year, range_step=-1, fill_with=0)#add a row with zero for each year where there was no dividend given
     dividendDF['date']=pd.to_datetime(dividendDF['year'].astype(str)+"-01-01",format="%Y-%m-%d",errors='raise')
     if dividendDict['dividend']!=[]:
         dividendSource = ColumnDataSource(data=dividendDict)
@@ -98,7 +98,7 @@ def createDivPlot(dividendDict,data,start='1/1/2013'):
         divPlot.legend.location = "top_left"
         return divPlot
     else:
-        print(f'no dividend since {datetime.strptime(start, "%m/%d/%Y").year}!')
+        print(f'no dividend since {startDate.year}!')
         divPlot=Div(text="no dividend since 2000! - Yahoo Finance")
         return divPlot
 
@@ -266,8 +266,9 @@ def findSell(i,trix,EMA_on_Trix):
 #####################BODY OF THE CODE##########################################
 ###############################################################################
 
-def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9):
+def createView(symbol,startDate,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9):
     
+    start=startDate.strftime("%d/%m/%Y") 
     data=pdr.get_data_yahoo(symbol,start=start)
     #print(data.keys())
     
@@ -353,11 +354,11 @@ def createView(symbol,start=None,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=
     stock_volume.vbar(x=timeList, top=data['Volume'], bottom=0, width=50000000, fill_color="#b3de69")
 
     #######################DIVIDEND EVENTS#####################################
-    dividendDict=get_dividend(symbol,start=start)#scrape the dividend data from the yahoo website
+    dividendDict=get_dividend(symbol,startDate=startDate)#scrape the dividend data from the yahoo website
     if dividendDict['date']==[]:
         dividendPlot=Div(text=f'<br>In this period, {symbol} did not pay any dividend.<br><br>',width=1200)
     else:
-        dividendPlot=createDivPlot(dividendDict,data,start=start)
+        dividendPlot=createDivPlot(dividendDict,data,startDate=startDate)
     
     ############## fluctuation depending on day of the week####################                 
     dates = pd.DatetimeIndex(timeList) #convert to datetime format
@@ -443,13 +444,14 @@ ticker='ABI.BR'
 EMA_days='55'
 Trix_EMA='39'
 EMA_on_Trix='9'
+startDate=date(2018,1,1)
 
 ####################VARIABLE INPUT BOXES######################################
 def ticker_update(attr, old, new):
     global ticker
     ticker=new
     updateCalback()
-tickerInput=TextInput(value="ABI.BR", title="Yahoo Ticker Symbol",width=250)
+tickerInput=TextInput(value="ABI.BR", title="Yahoo Ticker Symbol:",width=200)
 tickerInput.on_change("value", ticker_update)
 
 def EMA_update(attr, old, new):
@@ -461,7 +463,7 @@ def EMA_update(attr, old, new):
         EMA_days='55' 
         EMA.value=EMA_days
     updateCalback()
-EMA=TextInput(value="55", title="Exponential moving average - days",width=250)
+EMA=TextInput(value="55", title="Exponential moving average (days):",width=200)
 EMA.on_change("value", EMA_update)
 
 def Trix_EMA_update(attr, old, new):
@@ -473,7 +475,7 @@ def Trix_EMA_update(attr, old, new):
         Trix_EMA='39'
         Trix_EMA_input.value=Trix_EMA
     updateCalback()
-Trix_EMA_input=TextInput(value="39", title="EMA in the Trix equation - days",width=250)
+Trix_EMA_input=TextInput(value="39", title="EMA in the Trix equation (days):",width=200)
 Trix_EMA_input.on_change("value", Trix_EMA_update)
 
 def EMA_on_Trix_update(attr, old, new):
@@ -485,10 +487,18 @@ def EMA_on_Trix_update(attr, old, new):
         EMA_on_Trix='9' 
         EMA_on_Trix_input.value=EMA_on_Trix
     updateCalback()
-EMA_on_Trix_input=TextInput(value="9", title="EMA applied on Trix - days",width=250)
+EMA_on_Trix_input=TextInput(value="9", title="EMA applied on Trix (days):",width=200)
 EMA_on_Trix_input.on_change("value", EMA_on_Trix_update)
 
-inputRow=Row(tickerInput,EMA,Trix_EMA_input,EMA_on_Trix_input)
+datePicker=DatePicker(title='Select data start date:',value=startDate,min_date=date(2003,1,1),max_date=date.today(),width=200)
+def dateChange(attr,old,new):
+    global startDate
+    print(new)
+    startDate=datetime.strptime(new, '%Y-%m-%d')
+    updateCalback()
+datePicker.on_change('value',dateChange)
+
+inputRow=Row(tickerInput,EMA,Trix_EMA_input,EMA_on_Trix_input,datePicker)
 
 
 ######EXPLANATION DIV#########################################################
@@ -526,18 +536,17 @@ animationDiv=Div(text="""<div class="loader">
                  """,width=1000,height=200)
 
 def updateVisuals():
-    layout.children[-1]=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))  
+    layout.children[-1]=createView(ticker, startDate=startDate,EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))  
 
 def updateCalback():
     layout.children[-1]=animationDiv
     curdoc().add_next_tick_callback(updateVisuals)
 
 ######All togheter
-graps=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
 layout=Column(infoDiv,inputRow,animationDiv)
 
 def start():
-    graphs=createView(ticker, start='1/1/2003',EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
+    graphs=createView(ticker, startDate=startDate,EMA_days=int(EMA_days),Trix_EMA_days=int(Trix_EMA),EMA_on_Trix_days=int(EMA_on_Trix))
     layout.children[-1]=graphs   
 
 doc=curdoc()
