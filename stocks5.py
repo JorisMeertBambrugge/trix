@@ -1,4 +1,4 @@
-import pandas_datareader as pdr
+import yfinance as yf
 import pandas as pd
 import random
 import numpy as np
@@ -35,35 +35,6 @@ def crossing(a,b):
 # print(crossingIndexes)
 # =============================================================================
 
-#a function that scrapes the dividend history from yahoo
-def get_dividend(name,start='1/1/2013'):
-    dividendList = []
-    dividendDateList = []
-    
-    #calculate the time differences in seconds between 1-Jan-2000 and today
-    #startTimeSeconds=1262300400 #1 Jan 2010 
-    refDate=datetime.strptime(start, '%m/%d/%Y')
-    startTimeSeconds=int((refDate-datetime(1970,1,1)).total_seconds())
-    endTimeSeconds=int((datetime.today()-datetime(1970,1,1)).total_seconds())
-
-    url=f"https://finance.yahoo.com/quote/{name}/history?period1={startTimeSeconds}&period2={endTimeSeconds}&interval=div%7Csplit&filter=div&frequency=1d"
-    print(url)
-    rows = bs(urlRQ.urlopen(url).read(),'lxml').findAll('table')[0].tbody.findAll('tr')
-
-    for each_row in rows:
-        divs = each_row.findAll('td')
-        if divs[1].span.text  == 'Dividend': #use only the row from the table with dividend info
-            dividendDateList.append(divs[0].span.text)
-            dividendList.append(float(divs[1].strong.text.replace(',','')))
-            
-    dividendDateList=[datetime.strptime(i, '%b %d, %Y') for i in dividendDateList]#convert string list to datetime list
-
-    return {'date':dividendDateList,'dividend':dividendList}
-# =============================================================================
-# dividendDict=get_dividend('TUB.BR',start)#scrape the dividend data from the yahoo website
-# print(dividendDict)
-# =============================================================================
-
 def fill_missing_range(df, field, range_from, range_to, range_step=1, fill_with=0):
     """Function to transform a dataframe with missing rows because one column should be a stepwise range"""
     return df\
@@ -71,22 +42,31 @@ def fill_missing_range(df, field, range_from, range_to, range_step=1, fill_with=
             right = pd.DataFrame({field:np.arange(range_from, range_to, range_step)}))\
       .sort_values(by=field).reset_index().fillna(fill_with).drop(['index'], axis=1)
 
-def createDivPlot(dividendDict,data,start='1/1/2013'):
+
+#a function that scrapes the dividend history from yahoo
+def get_dividend(name,start='2000-01-01'):  
+    ticker1_obj = yf.Ticker(name)
+    dividendList = list(ticker1_obj.dividends[start:])
+    dividendDateList = list(ticker1_obj.dividends[start:].index)
+    return {'date':dividendDateList,'dividend':dividendList}
+
+def createDivPlot(dividendDict,start='2000-01-01'):
     dividendDF=pd.DataFrame(dividendDict)
-    print(dividendDict)
     dividendDF['year']=dividendDF['date'].dt.year+1#create a year column
     dividendDF["yearDiv"] = dividendDF.groupby(["year"])["dividend"].transform(sum)#sum by year
-    dividendDF['SP']=[data.loc[date]["Close"] for date in dividendDF['date']]
+    dataForDiv=yf.download(symbol,start=start)
+    
+    dividendDF['SP']=[dataForDiv.loc[date]["Close"] for date in dividendDF['date']]
     dividendDF['divPercent']=[100*div/tub for div,tub in zip(dividendDF['dividend'],dividendDF["SP"])]
     dividendDF=dividendDF[['date','year','yearDiv','divPercent']]#keep only what matters
     dividendDF.columns=['date','year','dividend','divPercent']#rename
     dividendDF = dividendDF.drop_duplicates(subset=['year'], keep='first')#drop duplicates
-    dividendDF=fill_missing_range(dividendDF, 'year', datetime.today().year, datetime.strptime(start, '%m/%d/%Y').year, range_step=-1, fill_with=0)#add a row with zero for each year where there was no dividend given
+    dividendDF=fill_missing_range(dividendDF, 'year', datetime.today().year, datetime.strptime(start, '%Y-%m-%d').year, range_step=-1, fill_with=0)#add a row with zero for each year where there was no dividend given
     dividendDF['date']=pd.to_datetime(dividendDF['year'].astype(str)+"-01-01",format="%Y-%m-%d",errors='raise')
     if dividendDict['dividend']!=[]:
         dividendSource = ColumnDataSource(data=dividendDict)
         dividendDFSource = ColumnDataSource(data=dividendDF)
-        hover = HoverTool(tooltips=[("date","@date{%m/%d/%Y}"),("dividend","@dividend")],formatters={'@date': 'datetime'})
+        hover = HoverTool(tooltips=[("date","@date{%Y-%m-%d}"),("dividend","@dividend")],formatters={'@date': 'datetime'})
         tools=['pan','box_zoom','wheel_zoom',hover,'reset']
         divPlot=figure(width=1200,height=400,title='Historical dividend',x_axis_type='datetime',y_axis_label='Dividend',
                        y_range=(0,1.05*max(max(dividendDF['divPercent']),max(dividendDF['dividend']))),tools=tools)
@@ -97,7 +77,7 @@ def createDivPlot(dividendDict,data,start='1/1/2013'):
         divPlot.legend.location = "top_left"
         return divPlot
     else:
-        print(f'no dividend since {datetime.strptime(start, "%m/%d/%Y").year}!')
+        print(f'no dividend since {datetime.strptime(start, "%Y-%m-%d").year}!')
         divPlot=Div(text="no dividend since 2000! - Yahoo Finance")
         return divPlot
 
@@ -267,7 +247,7 @@ def findSell(i,trix,EMA_on_Trix):
 
 def createView(symbol,start=None,getStrategyYield=False,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9):
     
-    data=pdr.get_data_yahoo(symbol,start=start)
+    data=yf.download(symbol,start=start)
     #print(data.keys())
     
     #get the x-axis values: datetime
@@ -353,11 +333,13 @@ def createView(symbol,start=None,getStrategyYield=False,EMA_days=200,Trix_EMA_da
     stock_volume.vbar(x=timeList, top=data['Volume'], bottom=0, width=50000000, fill_color="#b3de69")
 
     #######################DIVIDEND EVENTS#####################################
-    dividendDict=get_dividend(symbol,start=start)#scrape the dividend data from the yahoo website
+    print(start)
+    dividendDict=get_dividend(symbol,start=start)#get the dividend data
     if dividendDict['date']==[]:
         dividendPlot=Div(text=f'<br>In this period, {symbol} did not pay any dividend.<br><br>',width=1200)
     else:
-        dividendPlot=createDivPlot(dividendDict,data,start=start)
+        print(start)
+        dividendPlot=createDivPlot(dividendDict,start=start)
     
     ############## fluctuation depending on day of the week####################                 
     dates = pd.DatetimeIndex(timeList) #convert to datetime format
@@ -440,10 +422,10 @@ def createView(symbol,start=None,getStrategyYield=False,EMA_days=200,Trix_EMA_da
 ###############################################################################
 
 #weekly check for opportunity to sell/buy
-stocksOfInterest=['ABI.BR']#,'AGS.BR','IMMO.BR','MIKO.BR','SMAR.BR','SOF.BR','UCB.BR','TUB.BR','AM.PA','HBH.DE','TL5.MC','DCC.L','MGGT.L','AV.L','PG','INTC','CSIQ','NPSNY',"WB",'VMW']
-
+stocksOfInterest=['C07.SI','AGS.BR','IMMO.BR','MIKO.BR','OBEL.BR','SIP.BR','SOF.BR','UCB.BR','TUB.BR','AM.PA','TL5.MC','DCC.L','MGGT.L','AV.L','BABA','PG','INTC','CSIQ','NPN.JO','WPM']
+#stocksOfInterest=['BIDU','PDX.ST']
 for symbol in stocksOfInterest:
-    layout=createView(symbol, start='1/1/2018',getStrategyYield=True,EMA_days=55,Trix_EMA_days=39,EMA_on_Trix_days=9)
+    layout=createView(symbol, start='2017-01-01',getStrategyYield=True,EMA_days=55,Trix_EMA_days=39,EMA_on_Trix_days=9)
     show(layout)
 
 # =============================================================================
