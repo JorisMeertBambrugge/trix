@@ -1,4 +1,4 @@
-import pandas_datareader as pdr
+import yfinance as yf
 import pandas as pd
 import random
 import numpy as np
@@ -37,29 +37,12 @@ def crossing(a,b):
 # print(crossingIndexes)
 # =============================================================================
 
+
 #a function that scrapes the dividend history from yahoo
-def get_dividend(name,startDate):
-    dividendList = []
-    dividendDateList = []
-    
-    #calculate the time differences in seconds between 1-Jan-2000 and today
-    #startTimeSeconds=1262300400 #1 Jan 2010 
-    #refDate=datetime.strptime(start, '%m/%d/%Y')
-    startTimeSeconds=int((datetime(startDate.year,startDate.month,startDate.day)-datetime(1970,1,1)).total_seconds())
-    endTimeSeconds=int((datetime.today()-datetime(1970,1,1)).total_seconds())
-
-    url=f"https://finance.yahoo.com/quote/{name}/history?period1={startTimeSeconds}&period2={endTimeSeconds}&interval=div%7Csplit&filter=div&frequency=1d"
-    print(url)
-    rows = bs(urlRQ.urlopen(url).read(),'lxml').findAll('table')[0].tbody.findAll('tr')
-
-    for each_row in rows:
-        divs = each_row.findAll('td')
-        if divs[1].span.text  == 'Dividend': #use only the row from the table with dividend info
-            dividendDateList.append(divs[0].span.text)
-            dividendList.append(float(divs[1].strong.text.replace(',','')))
-            
-    dividendDateList=[datetime.strptime(i, '%b %d, %Y') for i in dividendDateList]#convert string list to datetime list
-
+def get_dividend(name,start='2000-01-01'):  
+    ticker1_obj = yf.Ticker(name)
+    dividendList = list(ticker1_obj.dividends[start:])
+    dividendDateList = list(ticker1_obj.dividends[start:].index)
     return {'date':dividendDateList,'dividend':dividendList}
 # =============================================================================
 # dividendDict=get_dividend('TUB.BR',start)#scrape the dividend data from the yahoo website
@@ -268,8 +251,8 @@ def findSell(i,trix,EMA_on_Trix):
 
 def createView(symbol,startDate,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9):
     
-    start=startDate.strftime("%d/%m/%Y") 
-    data=pdr.get_data_yahoo(symbol,start=start)
+    start=startDate.strftime("%Y-%m-%d") #e.g. '2017-01-01'    
+    data=yf.download(symbol,start=start)
     #print(data.keys())
     
     #get the x-axis values: datetime
@@ -354,7 +337,7 @@ def createView(symbol,startDate,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9
     stock_volume.vbar(x=timeList, top=data['Volume'], bottom=0, width=50000000, fill_color="#b3de69")
 
     #######################DIVIDEND EVENTS#####################################
-    dividendDict=get_dividend(symbol,startDate=startDate)#scrape the dividend data from the yahoo website
+    dividendDict=get_dividend(symbol,start=startDate)#scrape the dividend data from the yahoo website
     if dividendDict['date']==[]:
         dividendPlot=Div(text=f'<br>In this period, {symbol} did not pay any dividend.<br><br>',width=1200)
     else:
@@ -362,8 +345,8 @@ def createView(symbol,startDate,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9
     
     ############## fluctuation depending on day of the week####################                 
     dates = pd.DatetimeIndex(timeList) #convert to datetime format
-    weekdays = dates.weekday.values[:-365]#get the weekdays (0=monday, 1=tuesday,...)
-    values=list(data['Open'])[:-365]#get the values in a list
+    weekdays = dates.weekday.values#get the weekdays (0=monday, 1=tuesday,...)
+    values=list(data['Open'])#get the values in a list
     relToWeekAvg=getTimeVariability(timeList=list(weekdays),values=values,intervalSize=5)
     weekdaysStrings=[]
     for i in weekdays:
@@ -417,6 +400,7 @@ def createView(symbol,startDate,EMA_days=200,Trix_EMA_days=39,EMA_on_Trix_days=9
             monthStrings.append('12_Dec')
     
     sourceMonth=ColumnDataSource({'ratio to year average':relToYearAvg,'month':monthStrings})
+    print(sourceMonth.data)
     monthBoxPlot=createBoxPlot(Filter='month',yAxisFilter='ratio to year average',source=sourceMonth,title='Variability depending on the month of the year',width=1200)
     monthBoxPlot.y_range=Range1d(0.8,1.2)
 # =============================================================================
@@ -494,7 +478,7 @@ datePicker=DatePicker(title='Select data start date:',value=startDate,min_date=d
 def dateChange(attr,old,new):
     global startDate
     print(new)
-    startDate=datetime.strptime(new, '%Y-%m-%d')
+    startDate=datetime.strptime(new,"%Y-%m-%d")
     updateCalback()
 datePicker.on_change('value',dateChange)
 
