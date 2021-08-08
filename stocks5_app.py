@@ -11,8 +11,6 @@ from bokeh.models import Column,Row,ColumnDataSource,LinearAxis, Range1d, Band,D
 from bokeh.palettes import Spectral11
 from bokeh.models import HoverTool
 
-import urllib.request as urlRQ
-from bs4 import BeautifulSoup as bs
 from datetime import datetime,date
 
 ###############################################################################

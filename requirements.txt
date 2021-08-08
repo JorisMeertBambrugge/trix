@@ -3,4 +3,3 @@ pandas==1.1
 numpy==1.19.3
 yfinance==0.1.63
 bokeh==2.2.3
-beautifulsoup4==4.9.3
